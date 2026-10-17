@@ -54,7 +54,7 @@ class Placement:
     orientation: Orientation  # vertical or horizontal
 
     def rotated(self):
-        return replace(self, orientation=self.orientation.flipped)
+        return replace(self, orientation=self.orientation.flipped())
 
     # fungsi checker apakah placement kendaraan ada di dalam kapal
     def is_inside(self):
