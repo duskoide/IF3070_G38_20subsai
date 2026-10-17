@@ -61,7 +61,7 @@ class Placement:
         return self.x is not None and self.y is not None
 
     # fungsi untuk output grid yang di-occupy oleh kendaraan tertentu dengan placement p
-    def cells(self, vehicle: Vehicle):
+    def grids(self, vehicle: Vehicle):
         if not self.is_inside():
             return []
         vw, vl = vehicle.size_taken(self.orientation)
