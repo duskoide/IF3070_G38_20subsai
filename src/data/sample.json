@@ -1,0 +1,20 @@
+{
+  "ship": {"w": 10, "l": 20, "max_capacity": 500},
+  "vehicles": [
+    {"id": "Owen", "w": 3, "l": 4, "fee": 60, "weight": 50, "eta": 3},
+    {"id": "Truck_A", "w": 4, "l": 8, "fee": 150, "weight": 180, "eta": 5},
+    {"id": "Truck_B", "w": 3, "l": 7, "fee": 120, "weight": 140, "eta": 2},
+    {"id": "Bus", "w": 3, "l": 10, "fee": 140, "weight": 160, "eta": 4},
+    {"id": "Container", "w": 4, "l": 6, "fee": 110, "weight": 120, "eta": 8},
+    {"id": "Minibus", "w": 3, "l": 6, "fee": 90, "weight": 85, "eta": 6},
+    {"id": "Tractor", "w": 3, "l": 5, "fee": 80, "weight": 95, "eta": 3},
+    {"id": "SUV_1", "w": 2, "l": 4, "fee": 50, "weight": 35, "eta": 3},
+    {"id": "SUV_2", "w": 3, "l": 4, "fee": 65, "weight": 55, "eta": 5},
+    {"id": "Pickup", "w": 2, "l": 5, "fee": 50, "weight": 48, "eta": 4},
+    {"id": "Van_1", "w": 2, "l": 4, "fee": 45, "weight": 40, "eta": 1},
+    {"id": "Van_2", "w": 2, "l": 5, "fee": 55, "weight": 45, "eta": 6},
+    {"id": "Sedan_1", "w": 2, "l": 3, "fee": 30, "weight": 20, "eta": 2},
+    {"id": "Sedan_2", "w": 2, "l": 3, "fee": 35, "weight": 22, "eta": 7},
+    {"id": "Motor", "w": 1, "l": 2, "fee": 10, "weight": 5, "eta": 1}
+  ]
+}
