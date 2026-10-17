@@ -1,0 +1,22 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+
+# Virtual environments (uv / pip / venv)
+.venv/
+venv/
+env/
+
+# Packaging / build artifacts
+build/
+dist/
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Editor / OS
+.vscode/
+.DS_Store
