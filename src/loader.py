@@ -10,6 +10,13 @@ def load_problem(path: str) -> tuple[Ship, list[Vehicle]]:
 
     vehicles = [Vehicle(**v) for v in data["vehicles"]]
 
+    # dupe-id checker
+    seen = set()
+    for v in vehicles:
+        if v.id in seen:
+            raise ValueError(f"Duplicate vehicle id: {v.id!r}")
+        seen.add(v.id)
+
     return (ship, vehicles)
 
 
