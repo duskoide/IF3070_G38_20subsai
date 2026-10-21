@@ -1,12 +1,30 @@
+from dataclasses import dataclass
+
 from src.model import Ship, State, Vehicle
 from collections import Counter
 
-# Penalties
-OVERLAP_PENALTY = 1
 
-OUT_OF_BOUNDS_PENALTY = 1
+@dataclass(frozen=True)
+class PenaltyWeights:
+    overlap: float  # per sel kelebihan okupansi
+    out_of_bounds: float  # per kendaraan yang keluar batas
+    overweight_fixed: float  # sekali bila total berat > kapasitas
+    overweight_rate: float  # per unit berat di atas kapasitas
 
-OVERWEIGHT_PENALTY = 1
+
+def penalty_weights(vehicles_by_id: dict[str, Vehicle]) -> PenaltyWeights:
+    max_fee = max((v.fee for v in vehicles_by_id.values()), default=0)
+    base = max(0, max_fee) + 1
+    rate = max(
+        (v.fee / v.weight for v in vehicles_by_id.values() if v.weight > 0),
+        default=0.0,
+    )
+    return PenaltyWeights(
+        overlap=base,
+        out_of_bounds=base,
+        overweight_fixed=base,
+        overweight_rate=max(0.0, rate),
+    )
 
 # Helper functions
 # Gunakan vehicles_by_id dari loader untuk lookup kendaraan berdasarkan ID.
@@ -70,12 +88,12 @@ def objective(state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]) -> f
     out_of_bounds = count_out_of_bounds(state, ship, vehicles_by_id)
     overweight = excess_weight(state, ship, vehicles_by_id)
 
-    return float(
-        fee
-        - overlap * OVERLAP_PENALTY
-        - out_of_bounds * OUT_OF_BOUNDS_PENALTY
-        - overweight * OVERWEIGHT_PENALTY
-    )
+    weights = penalty_weights(vehicles_by_id)
+    penalty = overlap * weights.overlap + out_of_bounds * weights.out_of_bounds
+    if overweight > 0:
+        penalty += weights.overweight_fixed + overweight * weights.overweight_rate
+
+    return float(fee - penalty)
 
 # Checker untuk state yang feasible; i.e. tidak melanggar constraints
 def is_feasible(state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]) -> bool:
