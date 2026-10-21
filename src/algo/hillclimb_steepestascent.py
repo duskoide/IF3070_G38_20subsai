@@ -18,7 +18,6 @@ class SearchResult:
 def search(
     start: State,
     ship: Ship,
-    vehicles: list[Vehicle],
     vehicles_by_id: dict[str, Vehicle],
 ) -> SearchResult:
     start_time = perf_counter()
@@ -27,8 +26,10 @@ def search(
     history = [current_value]
     iterations = 0
 
-    best_state: State | None = None
+    # inisialisasi best_state & best value sebagai None    
+    best_state: State | None = None  
     best_value: float | None = None
+    # catat best feasible dari state awal
     if is_feasible(current, ship, vehicles_by_id):
         best_state, best_value = current, current_value
 
@@ -36,7 +37,7 @@ def search(
         best_neighbor = None
         best_neighbor_value = current_value
 
-        for neighbor in all_neighbors(current, ship, vehicles):
+        for neighbor in all_neighbors(current, ship, vehicles_by_id):
             neighbor_value = objective(neighbor, ship, vehicles_by_id)
 
             if neighbor_value > best_neighbor_value:
@@ -64,4 +65,4 @@ def search(
         iterations=iterations,
         duration_s=perf_counter() - start_time,
         extra={}
-    )
+        )
