@@ -17,7 +17,7 @@ class Orientation(str, Enum):
 @dataclass(frozen=True)
 class Vehicle:
     id: str
-    w: int  # patokan/orientasi lebar kendaraan: jarak dari ban kiri ke ban kendaraan
+    w: int  # patokan/orientasi lebar kendaraan: jarak dari ban kiri ke ban kanan
     l: int  # patokan/orientasi panjang kendaraan: jarak dari bagian depan ke bagian belakang mobil
     fee: int
     weight: int
