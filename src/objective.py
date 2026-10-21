@@ -1,37 +1,86 @@
 from src.model import Ship, State, Vehicle
+from collections import Counter
 
-OVERLAP_PENALTY = None  # per overlapping grid
-OUT_OF_BOUNDS_PENALTY = None  # per vehicle yang di luar kapal
-OVERWEIGHT_PENALTY = None  # per satuan unit di atas max_capacity
+# Penalties
+OVERLAP_PENALTY = 1
 
+OUT_OF_BOUNDS_PENALTY = 1
 
+OVERWEIGHT_PENALTY = 1
+
+# Helper functions
+# Sebelum Objective functions, bikin dulu vehicles_by_id = {v.id: v for v in vehicles} biar langsung masukin dict untuk efisiensi lookup
 def total_fee(state: State, vehicles_by_id: dict[str, Vehicle]) -> int:
-    # Total fee untuk seluruh kendaraan di atas kapal
-    raise NotImplementedError
+    total = 0
+
+    for p in state.placements.values():
+        if p.is_inside():
+            vehicle = vehicles_by_id[p.vehicle_id]
+            total += vehicle.fee
+
+    return total
 
 
 def total_weight(state: State, vehicles_by_id: dict[str, Vehicle]) -> int:
-    # Total fee untuk seluruh kendaraan di atas kapal
-    raise NotImplementedError
+    total = 0
+
+    for p in state.placements.values():
+        if p.is_inside():
+            vehicle = vehicles_by_id[p.vehicle_id]
+            total += vehicle.weight
+
+    return total
 
 
 def count_overlap(state: State, vehicles_by_id: dict[str, Vehicle]) -> int:
-    # Jumlah grid yang di-occupy oleh lebih dari satu kendaraan
-    raise NotImplementedError
+    occupancy: Counter[tuple[int, int]] = Counter()
+
+    for p in state.placements.values():
+        if p.is_inside():
+            vehicle = vehicles_by_id[p.vehicle_id]
+            occupancy.update(p.grids(vehicle))
+
+    return sum(c - 1 for c in occupancy.values() if c > 1)
 
 
 def count_out_of_bounds(
     state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]
 ) -> int:
-    # Jumlah kendaraan yang tidak sepenuhnya berada di dalam kapal
-    raise NotImplementedError
+    count = 0
+    for p in state.placements.values():
+        x, y = p.x, p.y
+        if x is not None and y is not None:
+            vehicle = vehicles_by_id[p.vehicle_id]
+            vw, vl = vehicle.size_taken(p.orientation)
+            if not ship.in_boundary(x, y, vw, vl):
+                count += 1
+
+    return count
 
 
-def overweight(state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]) -> int:
-    # Total berat yang melebihi max_capacity
-    raise NotImplementedError
+def excess_weight(state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]) -> int:
+    w = total_weight(state, vehicles_by_id)
+    return max(0, w - ship.max_capacity)
 
 
-def objective(state: State, ship: Ship, vehicles: list[Vehicle]) -> float:
-    # Total fee dikurangi penalty, nanti dicall buat algorithm
-    raise NotImplementedError
+# Objective function
+def objective(state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]) -> float:
+    fee = total_fee(state, vehicles_by_id)
+    overlap = count_overlap(state, vehicles_by_id)
+    out_of_bounds = count_out_of_bounds(state, ship, vehicles_by_id)
+    overweight = excess_weight(state, ship, vehicles_by_id)
+
+    return float(
+        fee
+        - overlap * OVERLAP_PENALTY
+        - out_of_bounds * OUT_OF_BOUNDS_PENALTY
+        - overweight * OVERWEIGHT_PENALTY
+    )
+
+# Checker untuk state yang feasible; i.e. tidak melanggar constraints
+def is_feasible(state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]) -> bool:
+    return (
+        excess_weight(state, ship, vehicles_by_id) == 0
+        and count_out_of_bounds(state, ship, vehicles_by_id) == 0
+        and count_overlap(state, vehicles_by_id) == 0
+    )
