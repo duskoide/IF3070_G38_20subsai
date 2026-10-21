@@ -1,12 +1,46 @@
+from dataclasses import dataclass
+
 from src.model import Ship, State, Vehicle
 from collections import Counter
 
-# Penalties
-OVERLAP_PENALTY = 1
+# Penalti dihitung dari data instance (bukan konstanta tetap) agar setiap state
+# infeasible SELALU bernilai lebih rendah daripada state hasil mengeluarkan
+# kendaraan pelanggarnya. Akibatnya maksimum global objective pasti feasible,
+# dan pada state feasible objective = total fee.
+#
+# Dengan F = max(fee) dan R = max(fee / weight) atas kendaraan berweight > 0:
+# - overlap        : (F + 1) per sel kelebihan okupansi. Mengeluarkan kendaraan
+#                    yang overlap mengurangi >= 1 sel, untung >= F + 1 > fee_v.
+# - out of bounds  : (F + 1) per kendaraan keluar batas. Mengeluarkannya untung
+#                    F + 1 > fee_v.
+# - overweight E   : (F + 1) sekali bila E > 0, ditambah R per unit berlebih.
+#                    Bila mengeluarkan v membuat E = 0, bagian tetap menutup
+#                    fee_v; bila belum, penalti turun R * w_v >= fee_v.
+#                    (R per unit saja TIDAK cukup: berlebih 1 unit hanya
+#                    dipenalti R, lebih kecil dari fee kendaraan termurah.)
 
-OUT_OF_BOUNDS_PENALTY = 1
 
-OVERWEIGHT_PENALTY = 1
+@dataclass(frozen=True)
+class PenaltyWeights:
+    overlap: float  # per sel kelebihan okupansi
+    out_of_bounds: float  # per kendaraan yang keluar batas
+    overweight_fixed: float  # sekali bila total berat > kapasitas
+    overweight_rate: float  # per unit berat di atas kapasitas
+
+
+def penalty_weights(vehicles_by_id: dict[str, Vehicle]) -> PenaltyWeights:
+    max_fee = max((v.fee for v in vehicles_by_id.values()), default=0)
+    base = max(0, max_fee) + 1
+    rate = max(
+        (v.fee / v.weight for v in vehicles_by_id.values() if v.weight > 0),
+        default=0.0,
+    )
+    return PenaltyWeights(
+        overlap=base,
+        out_of_bounds=base,
+        overweight_fixed=base,
+        overweight_rate=max(0.0, rate),
+    )
 
 # Helper functions
 # Gunakan vehicles_by_id dari loader untuk lookup kendaraan berdasarkan ID.
@@ -70,12 +104,12 @@ def objective(state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]) -> f
     out_of_bounds = count_out_of_bounds(state, ship, vehicles_by_id)
     overweight = excess_weight(state, ship, vehicles_by_id)
 
-    return float(
-        fee
-        - overlap * OVERLAP_PENALTY
-        - out_of_bounds * OUT_OF_BOUNDS_PENALTY
-        - overweight * OVERWEIGHT_PENALTY
-    )
+    weights = penalty_weights(vehicles_by_id)
+    penalty = overlap * weights.overlap + out_of_bounds * weights.out_of_bounds
+    if overweight > 0:
+        penalty += weights.overweight_fixed + overweight * weights.overweight_rate
+
+    return float(fee - penalty)
 
 # Checker untuk state yang feasible; i.e. tidak melanggar constraints
 def is_feasible(state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]) -> bool:
