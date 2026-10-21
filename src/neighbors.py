@@ -60,9 +60,9 @@ def rotate(state: State, vehicle_id: str) -> State | None:
     return _with_placements(state, p.rotated())
 
 def all_neighbors(
-    state: State, ship: Ship, vehicles: list[Vehicle]
+    state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]
 ) -> Iterator[State]:
-    ids = [vehicle.id for vehicle in vehicles]
+    ids = list(vehicles_by_id)
 
     for i, a_id in enumerate(ids):
         for b_id in ids[i + 1 :]:
@@ -70,7 +70,7 @@ def all_neighbors(
             if neighbor is not None:
                 yield neighbor
 
-    for vehicle in vehicles:
+    for vehicle in vehicles_by_id.values():
         placement = state.placements[vehicle.id]
         for x, y in valid_positions(ship, vehicle, placement.orientation):
             neighbor = move(state, vehicle.id, x, y)
@@ -78,13 +78,13 @@ def all_neighbors(
                 yield neighbor
 
     if ALLOW_MOVE_OUT:
-        for vehicle in vehicles:
+        for vehicle in vehicles_by_id.values():
             if state.placements[vehicle.id].is_inside():
                 neighbor = move_out(state, vehicle.id)
                 if neighbor is not None:
                     yield neighbor
 
-    for vehicle in vehicles:
+    for vehicle in vehicles_by_id.values():
         placement = state.placements[vehicle.id]
         if placement.is_inside() and vehicle.w != vehicle.l:
             neighbor = rotate(state, vehicle.id)
@@ -92,9 +92,9 @@ def all_neighbors(
                 yield neighbor
 
 def random_neighbor(
-    state: State, ship: Ship, vehicles: list[Vehicle], rng: random.Random
+    state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle], rng: random.Random
 ) -> State | None:
-    ids = [vehicle.id for vehicle in vehicles]
+    ids = list(vehicles_by_id)
     move_types = [
         move_type
         for move_type in MOVE_WEIGHTS
@@ -111,9 +111,9 @@ def random_neighbor(
             a_id, b_id = rng.sample(ids, 2)
             neighbor = swap(state, a_id, b_id)
         elif move_type == "move":
-            if not vehicles:
+            if not vehicles_by_id:
                 continue
-            vehicle = rng.choice(vehicles)
+            vehicle = vehicles_by_id[rng.choice(ids)]
             placement = state.placements[vehicle.id]
             positions = [
                 position
@@ -136,7 +136,7 @@ def random_neighbor(
         elif move_type == "rotate":
             rotatable_ids = [
                 vehicle.id
-                for vehicle in vehicles
+                for vehicle in vehicles_by_id.values()
                 if state.placements[vehicle.id].is_inside()
                 and vehicle.w != vehicle.l
             ]

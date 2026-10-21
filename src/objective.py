@@ -9,7 +9,7 @@ OUT_OF_BOUNDS_PENALTY = 1
 OVERWEIGHT_PENALTY = 1
 
 # Helper functions
-# Sebelum Objective functions, bikin dulu vehicles_by_id = {v.id: v for v in vehicles} biar langsung masukin dict untuk efisiensi lookup
+# Gunakan vehicles_by_id dari loader untuk lookup kendaraan berdasarkan ID.
 def total_fee(state: State, vehicles_by_id: dict[str, Vehicle]) -> int:
     total = 0
 
