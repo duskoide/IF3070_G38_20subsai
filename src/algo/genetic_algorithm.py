@@ -7,14 +7,12 @@ from src.initial import random_initial_state
 from src.neighbors import random_neighbor
 from src.objective import is_feasible, objective
 
-
-# Nilai awal rekomendasi
 MUTATION_PROBABILITY = 0.1
 
-MOVE_WEIGHTS = {"swap": 1, "move": 1, "move_out": 0.15, "rotate": 1}
+MOVE_WEIGHTS = {"swap": 1, "move": 0.2, "move_out": 0.4, "rotate": 0.2}
 
-# Pressure s rank roulette
-RANK_PRESSURE = 1.5 # antara 1 sampe 2
+# k numbers of contestants in select_parent()
+TOURNAMENT_SIZE = 3
 
 # Elitism (preserve child superior)
 ELITE_COUNT = 2
@@ -63,42 +61,81 @@ def select_parent(
     population: list[State], fitness: list[float], rng: random.Random
 ) -> State:
 
-    # Rank roulette
+    # tournament selection with k contestants
     n = len(population)
     if n == 0 or n != len(fitness):
         raise ValueError("populasi kosong atau panjang tidak sama dengan fitness")
     if n == 1:
         return population[0]
-    s = RANK_PRESSURE
-    order = sorted(range(n), key=lambda i: fitness[i])
-    weights = [0.0] * n
-    for r, i in enumerate(order): # r ini rank/position per i
-        weights[i] = (2 - s) + 2 * (s - 1) * r / (n - 1)
-    return rng.choices(population, weights=weights, k=1)[0]
+
+    k = min(n, TOURNAMENT_SIZE) # handling if population < tournament_size
+    tourney_idx = []
+
+    # population & fitness paralel, ambil index fitness. repeating index allowed
+    for _ in range (k):
+        tourney_idx.append(rng.randrange(n))
+    parent_idx: int = max(tourney_idx, key = lambda i: fitness[i]) # index max dari fitness
+
+    return population[parent_idx]
 
 def crossover(
     parent_a: State,
     parent_b: State,
+    ship: Ship,
     vehicles_by_id: dict[str, Vehicle],
     rng: random.Random,
 ) -> State:
+    # Acak induk mana yang dapet prioritas area
+    if rng.random() < 0.5:
+        parent_a, parent_b = parent_b, parent_a
 
-    children_id = list(vehicles_by_id)
-    n = len(children_id)
-    if n >= 2:
-        c = rng.randint(1, n-1)
+    axis = rng.choice(["x", "y"])
+    extent = ship.w if axis == "x" else ship.l
+    cut = rng.randint(1, extent - 1) if extent > 1 else extent
+    ids = list(vehicles_by_id)
+    rng.shuffle(ids)
 
-        placements = {}
-        for i, vehicle_id in enumerate(children_id):
-            if i < c:
-                parent = parent_a
-            else:
-                parent = parent_b
-            placements[vehicle_id] = parent.placements[vehicle_id]
+    # Ambil vehicle A yang keseluruhannya di kiri/atas garis potong
+    candidates = []
+    for vehicle_id in ids:
+        p = parent_a.placements[vehicle_id]
+        if not p.is_inside():
+            continue
+        vw, vl = vehicles_by_id[vehicle_id].size_taken(p.orientation)
+        edge = p.x + vw if axis == "x" else p.y + vl
+        if edge <= cut:
+            candidates.append(p)
 
-        return State(placements)
-    else:
-        return State(dict(parent_a.placements))
+    # then try B, terus sisanya A yang masih bisa masuk
+    for parent in (parent_b, parent_a):
+        for vehicle_id in ids:
+            candidates.append(parent.placements[vehicle_id])
+
+    placements = {}
+    for vehicle_id in vehicles_by_id:
+        p = parent_a.placements[vehicle_id]
+        placements[vehicle_id] = Placement(vehicle_id, None, None, p.orientation)
+
+    occupied = set()
+    total_weight = 0
+    for p in candidates:
+        if not p.is_inside() or placements[p.vehicle_id].is_inside():
+            continue
+        vehicle = vehicles_by_id[p.vehicle_id]
+        vw, vl = vehicle.size_taken(p.orientation)
+        if not ship.in_boundary(p.x, p.y, vw, vl):
+            continue
+        if not ship.within_capacity(total_weight + vehicle.weight):
+            continue
+        cells = p.grids(vehicle)
+        if any(cell in occupied for cell in cells):
+            continue
+
+        placements[p.vehicle_id] = p
+        occupied.update(cells)
+        total_weight += vehicle.weight
+
+    return State(placements)
 
 
 def mutate(
@@ -178,7 +215,7 @@ def search(
         while len(new_population) < population_size:
             a = select_parent(population, fitness, rng)
             b = select_parent(population, fitness, rng)
-            child = crossover(a, b, vehicles_by_id, rng)
+            child = crossover(a, b, ship, vehicles_by_id, rng)
             if rng.random() < MUTATION_PROBABILITY:
                 child = mutate(child, ship, vehicles_by_id, rng)
             new_population.append(child)
@@ -210,8 +247,9 @@ def search(
             "population_size": population_size,
             "max_iter": max_iter,
             "mutation_probability": MUTATION_PROBABILITY,
-            "rank_pressure": RANK_PRESSURE,
+            "tournament_size": TOURNAMENT_SIZE,
             "elite_count": ELITE_COUNT,
+            "move_weights": MOVE_WEIGHTS,
             "seed": seed,
             "initial_value": initial_value
         },
