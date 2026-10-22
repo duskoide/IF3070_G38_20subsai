@@ -1,6 +1,7 @@
 # run: python -m src.main
 
 import random
+from pathlib import Path
 
 from src.algo import genetic_algorithm as ga
 from src.algo import hillclimb_randomrestart as hc_random_restart
@@ -100,6 +101,8 @@ def run(name, algorithm, ship, vehicles, seed, **params):
     print(f"\n--- {name} ---")
     if params:
         print(f"Parameter   : {params}")
+
+    visualize = input("Simpan visualisasi? [y/N]: ").strip().lower() == "y"
     rng = random.Random(seed)
     start = random_initial_state(ship, vehicles, rng)
     result = algorithm(start, ship, vehicles, rng, show_iteration(ship, vehicles), **params)
@@ -109,6 +112,15 @@ def run(name, algorithm, ship, vehicles, seed, **params):
     print(f"Feasible    : {is_feasible(result.final_state, ship, vehicles)}")
     print(f"Iterasi     : {result.iterations}")
     print(f"Durasi      : {result.duration_s:.3f} s")
+
+    if visualize:
+        from src.visualize import draw_run  # only import matplotlib kalo perlu
+        out_dir = Path("output") / name.lower().replace(" ", "_")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / f"seed{seed}.png"
+        label = "_".join(f"{k}={v}" for k, v in params.items()) or "default"
+        draw_run(name, label, seed, result, ship, vehicles, path)
+        print(f"Visualisasi : {path}")
 
 
 def main():
