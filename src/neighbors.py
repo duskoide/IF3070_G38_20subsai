@@ -5,7 +5,6 @@ from collections.abc import Iterator
 from src.model import Orientation, Placement, Ship, State, Vehicle
 
 # KONSTANTA
-MOVE_WEIGHTS = {"swap": 1, "move": 1, "move_out": 1, "rotate": 1}
 ALLOW_MOVE_OUT = True
 SWAP_ORIENTATION = False
 
@@ -15,7 +14,7 @@ def _with_placements(state: State, *new_placements: Placement) -> State:
         d[p.vehicle_id] = p
     return State(d)
 
-def valid_positions( 
+def valid_positions(
     ship: Ship, vehicle: Vehicle, orientation: Orientation
 ) -> Iterator[tuple[int, int]]:
     vw, vl = vehicle.size_taken(orientation)
@@ -36,7 +35,7 @@ def swap(state: State, a_id: str, b_id: str) -> State | None:
 
     pa_baru = dataclasses.replace(pa, x=pb.x, y=pb.y)
     pb_baru = dataclasses.replace(pb, x=pa.x, y=pa.y)
-    return _with_placements(state, pa_baru, pb_baru)  
+    return _with_placements(state, pa_baru, pb_baru)
 
 def move(state: State, vehicle_id: str, x: int, y: int) -> State | None:
     p = state.placements[vehicle_id]
@@ -91,16 +90,16 @@ def all_neighbors(
             if neighbor is not None:
                 yield neighbor
 
+# define move_weights di masing-masing algorithm. move_weights = {"swap": 1, ..., "move_out": 0.12} misalnya
 def random_neighbor(
-    state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle], rng: random.Random
-) -> State | None:
+    state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle], rng: random.Random, move_weights: dict[str, float]) -> State | None:
     ids = list(vehicles_by_id)
     move_types = [
         move_type
-        for move_type in MOVE_WEIGHTS
+        for move_type in move_weights
         if move_type != "move_out" or ALLOW_MOVE_OUT
     ]
-    weights = [MOVE_WEIGHTS[move_type] for move_type in move_types]
+    weights = [move_weights[move_type] for move_type in move_types]
 
     for _ in range(100):
         move_type = rng.choices(move_types, weights=weights, k=1)[0]
