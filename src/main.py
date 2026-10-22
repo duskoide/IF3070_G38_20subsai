@@ -1,5 +1,6 @@
 # run: python -m src.main
 
+import copy
 import random
 
 from src.algo import genetic_algorithm as ga
@@ -20,7 +21,14 @@ def run_ga(start, ship, vehicles, rng, show):
 
 
 def run_sa(start, ship, vehicles, rng, show):
-    return sa.search(start, ship, vehicles, rng, on_iteration=show)
+    summaries = []
+    for max_iter in [5000, 10000, 20000]:
+        # copy.copy(rng): tiap run mulai dari keacakan yang sama, jadi yang beda hanya max_iter
+        result = sa.search(start, ship, vehicles, copy.copy(rng), on_iteration=show, max_iter=max_iter)
+        summaries.append(f"max_iter {max_iter} -> value akhir {result.final_value}, iterasi {result.iterations}, stuck {result.stuck_count} kali")
+    # dicetak setelah semua run selesai supaya tidak tertimbun output per iterasi
+    print("\n".join(summaries))
+    return result
 
 
 def run_hc_steepest(start, ship, vehicles, rng, show):
