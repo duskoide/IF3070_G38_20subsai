@@ -3,22 +3,6 @@ from dataclasses import dataclass
 from src.model import Ship, State, Vehicle
 from collections import Counter
 
-# Penalti dihitung dari data instance (bukan konstanta tetap) agar setiap state
-# infeasible SELALU bernilai lebih rendah daripada state hasil mengeluarkan
-# kendaraan pelanggarnya. Akibatnya maksimum global objective pasti feasible,
-# dan pada state feasible objective = total fee.
-#
-# Dengan F = max(fee) dan R = max(fee / weight) atas kendaraan berweight > 0:
-# - overlap        : (F + 1) per sel kelebihan okupansi. Mengeluarkan kendaraan
-#                    yang overlap mengurangi >= 1 sel, untung >= F + 1 > fee_v.
-# - out of bounds  : (F + 1) per kendaraan keluar batas. Mengeluarkannya untung
-#                    F + 1 > fee_v.
-# - overweight E   : (F + 1) sekali bila E > 0, ditambah R per unit berlebih.
-#                    Bila mengeluarkan v membuat E = 0, bagian tetap menutup
-#                    fee_v; bila belum, penalti turun R * w_v >= fee_v.
-#                    (R per unit saja TIDAK cukup: berlebih 1 unit hanya
-#                    dipenalti R, lebih kecil dari fee kendaraan termurah.)
-
 
 @dataclass(frozen=True)
 class PenaltyWeights:
