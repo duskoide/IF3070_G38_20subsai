@@ -13,8 +13,8 @@ MUTATION_PROBABILITY = 0.1
 
 MOVE_WEIGHTS = {"swap": 1, "move": 1, "move_out": 0.15, "rotate": 1}
 
-# Pressure s rank roulette
-RANK_PRESSURE = 1.5 # antara 1 sampe 2
+# k numbers of contestants in select_parent()
+TOURNAMENT_SIZE = 2
 
 # Elitism (preserve child superior)
 ELITE_COUNT = 2
@@ -63,18 +63,22 @@ def select_parent(
     population: list[State], fitness: list[float], rng: random.Random
 ) -> State:
 
-    # Rank roulette
+    # tournament selection with k contestants
     n = len(population)
     if n == 0 or n != len(fitness):
         raise ValueError("populasi kosong atau panjang tidak sama dengan fitness")
     if n == 1:
         return population[0]
-    s = RANK_PRESSURE
-    order = sorted(range(n), key=lambda i: fitness[i])
-    weights = [0.0] * n
-    for r, i in enumerate(order): # r ini rank/position per i
-        weights[i] = (2 - s) + 2 * (s - 1) * r / (n - 1)
-    return rng.choices(population, weights=weights, k=1)[0]
+
+    k = min(n, TOURNAMENT_SIZE) # handling if population < tournament_size
+    tourney_idx = []
+
+    # population & fitness paralel, ambil index fitness. repeating index allowed
+    for _ in range (k):
+        tourney_idx.append(rng.randrange(n))
+    parent_idx = max(fitness[i] for i in tourney_idx)
+
+    return population[parent_idx]
 
 def crossover(
     parent_a: State,
@@ -210,7 +214,7 @@ def search(
             "population_size": population_size,
             "max_iter": max_iter,
             "mutation_probability": MUTATION_PROBABILITY,
-            "rank_pressure": RANK_PRESSURE,
+            "tournament_size": TOURNAMENT_SIZE,
             "elite_count": ELITE_COUNT,
             "seed": seed,
             "initial_value": initial_value
