@@ -80,6 +80,16 @@ def excess_weight(state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]) 
     w = total_weight(state, vehicles_by_id)
     return max(0, w - ship.max_capacity)
 
+# Helper function untuk bonus objective function #2
+def total_eta(state: State, vehicles_by_id: dict[str, Vehicle]) -> int:
+    total = 0
+
+    for p in state.placements.values():
+        if p.is_inside():
+            vehicle = vehicles_by_id[p.vehicle_id]
+            total += vehicle.eta
+
+    return total
 
 # Objective function
 def objective(state: State, ship: Ship, vehicles_by_id: dict[str, Vehicle]) -> float:
