@@ -19,6 +19,7 @@ class SearchResult:
     temperatures: list[float]
     iterations: int
     stuck_count: int
+    stuck_iterations: list[int]
     duration_s: float
     params: dict
     extra: dict
@@ -73,6 +74,7 @@ def search(
     probability_history = []          
     temperature_history = []          
     stuck_count = 0
+    stuck_iterations = []
     iterations_without_improvement = 0
     iteration = 0
 
@@ -104,6 +106,7 @@ def search(
             iterations_without_improvement = iterations_without_improvement + 1
             if iterations_without_improvement == stuck_k:
                 stuck_count = stuck_count + 1
+                stuck_iterations.append(iteration)
                 iterations_without_improvement = 0
 
         if current_value > best_feasible_value:
@@ -164,6 +167,7 @@ def search(
         temperatures=temperature_history,
         iterations=iteration,
         stuck_count=stuck_count,
+        stuck_iterations=stuck_iterations,
         duration_s=duration,
         params=params,
         extra=extra,

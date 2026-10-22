@@ -20,7 +20,7 @@ from src.algo import hillclimb_stochastic as hc_stochastic
 from src.algo import simulated_annealing as sa
 from src.initial import random_initial_state
 from src.loader import load_problem
-from src.objective import is_feasible, objective
+from src.objective import is_feasible, objective, total_weight
 
 DATA_PATH = "src/data/sample.json"
 SEEDS = [67, 69, 420]  # 3 run per konfigurasi
@@ -65,7 +65,8 @@ def draw_state(ax, title, state, ship, vehicles):
                     fontsize=6, rotation=90 if vl > vw else 0)
     outside = [vid for vid, p in state.placements.items() if not p.is_inside()]
     ax.set_title(f"{title}\nvalue {objective(state, ship, vehicles)}, "
-                 f"feasible {is_feasible(state, ship, vehicles)}", fontsize=9)
+                 f"feasible {is_feasible(state, ship, vehicles)}, "
+                 f"berat {total_weight(state, vehicles)}/{ship.max_capacity}", fontsize=9)
     ax.set_xlabel(textwrap.fill("Di luar kapal: " + ", ".join(outside), 45), fontsize=6)
 
 
@@ -82,6 +83,10 @@ def draw_run(name, label, seed, result, ship, vehicles, path):
     ax_plot.plot(result.history, label="maksimum populasi" if is_ga else "value")
     if is_ga:
         ax_plot.plot(result.extra["history_avg"], label="rata-rata populasi")
+    # SA: tandai iterasi tempat stuck tercatat (R-EXP-06)
+    for index, stuck_iteration in enumerate(getattr(result, "stuck_iterations", [])):
+        ax_plot.axvline(stuck_iteration, color="red", linewidth=0.6, linestyle="--", alpha=0.6,
+                        label=f"stuck ({result.extra['stuck_k']} iterasi tanpa perbaikan)" if index == 0 else None)
     ax_plot.set_xlabel("iterasi")
     ax_plot.set_ylabel("objective")
     ax_plot.legend()
@@ -98,8 +103,9 @@ def draw_run(name, label, seed, result, ship, vehicles, path):
     draw_state(ax_start, "State awal", result.initial_state, ship, vehicles)
     draw_state(ax_final, "State akhir", result.final_state, ship, vehicles)
 
+    stuck_text = f" | stuck {result.stuck_count} kali" if hasattr(result, "stuck_count") else ""
     fig.suptitle(f"{name} | {label} | seed {seed} | value akhir {result.final_value} | "
-                 f"iterasi {result.iterations} | durasi {result.duration_s:.3f} s")
+                 f"iterasi {result.iterations} | durasi {result.duration_s:.3f} s{stuck_text}")
     extra = {k: v for k, v in result.extra.items() if k != "history_avg"}
     ax_plot.set_title(textwrap.fill(str(extra), 100), fontsize=7, loc="left")
     fig.savefig(path, dpi=120, bbox_inches="tight")
