@@ -137,7 +137,8 @@ def run(name, algorithm, ship, vehicles, seed, **params):
 
         out_dir = Path("output") / name.lower().replace(" ", "_")
         out_dir.mkdir(parents=True, exist_ok=True)
-        path = out_dir / f"seed{seed}.png"
+        suffix = "".join(f"{k.removesuffix('_size')}{v}" for k, v in params.items())
+        path = out_dir / f"seed{seed}{suffix}.png"
         label = "_".join(f"{k}={v}" for k, v in params.items()) or "default"
         draw_run(name, label, seed, result, ship, vehicles, path)
         print(f"Visualisasi : {path}")
