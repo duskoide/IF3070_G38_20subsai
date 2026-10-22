@@ -114,7 +114,7 @@ def crossover(
     placements = {}
     for vehicle_id in vehicles_by_id:
         p = parent_a.placements[vehicle_id]
-        placements[vehicle_id] = dataclasses.replace(p, x=None, y=None)
+        placements[vehicle_id] = Placement(vehicle_id, None, None, p.orientation)
 
     occupied = set()
     total_weight = 0
