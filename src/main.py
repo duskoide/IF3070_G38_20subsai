@@ -24,9 +24,6 @@ def run_ga(start, ship, vehicles, rng, show, **params):
 def run_sa(start, ship, vehicles, rng, show, **params):
     result = sa.search(start, ship, vehicles, rng, on_iteration=show, **params)
     print(f"Stuck       : {result.stuck_count} kali")
-    print(
-        f"Stuck = jumlah blok {result.params['stuck_k']} iterasi tanpa peningkatan nilai objective terbaik."
-    )
     return result
 
 
