@@ -11,8 +11,13 @@ from src.objective import is_feasible, objective
 # Nilai awal rekomendasi
 MUTATION_PROBABILITY = 0.1
 
+MOVE_WEIGHTS = {"swap": 1, "move": 1, "move_out": 0.15, "rotate": 1}
+
 # Pressure s rank roulette
 RANK_PRESSURE = 1.5 # antara 1 sampe 2
+
+# Elitism (preserve child superior)
+ELITE_COUNT = 2
 
 
 @dataclasses.dataclass
@@ -100,7 +105,7 @@ def mutate(
     child: State, ship: Ship, vehicles_by_id: dict[str, Vehicle], rng: random.Random
 ) -> State:
 
-    potential_mutation = random_neighbor(child, ship, vehicles_by_id, rng)
+    potential_mutation = random_neighbor(child, ship, vehicles_by_id, rng, MOVE_WEIGHTS)
     return potential_mutation if potential_mutation is not None else child
 
 
@@ -133,6 +138,7 @@ def search(
     population_size: int = 50,
     max_iter: int = 300,
     seed: int | None = None,
+    on_iteration=None,  # callback opsional (iterasi, state terbaik generasi, value)
 ) -> SearchResult:
     if isinstance(population_size, bool) or not isinstance(population_size, int) or population_size < 1:
         raise ValueError("population_size harus integer >= 1")
@@ -162,9 +168,13 @@ def search(
 
     history = [max(fitness)]
     history_avg = [sum(fitness) / len(fitness)]
+    if on_iteration is not None:
+        on_iteration(0, population[current_idx], initial_value)
 
     for i in range(max_iter):
-        new_population = []
+        elite_n = min(ELITE_COUNT, population_size - 1) # count agar populasi 1 masih bisa punya child
+        top_child = sorted(range(population_size), key=lambda i: fitness[i], reverse=True)[:elite_n]
+        new_population = [State(dict(population[i].placements)) for i in top_child]
         while len(new_population) < population_size:
             a = select_parent(population, fitness, rng)
             b = select_parent(population, fitness, rng)
@@ -178,6 +188,9 @@ def search(
         best_state, best_value = update_best_feasible(population, fitness, ship, vehicles_by_id, best_state, best_value)
         history.append(max(fitness))
         history_avg.append(sum(fitness) / len(fitness))
+        if on_iteration is not None:
+            current_idx = fitness.index(max(fitness))
+            on_iteration(i + 1, population[current_idx], fitness[current_idx])
 
 
     if not is_feasible(best_state, ship, vehicles_by_id):
@@ -198,6 +211,7 @@ def search(
             "max_iter": max_iter,
             "mutation_probability": MUTATION_PROBABILITY,
             "rank_pressure": RANK_PRESSURE,
+            "elite_count": ELITE_COUNT,
             "seed": seed,
             "initial_value": initial_value
         },
