@@ -81,26 +81,61 @@ def select_parent(
 def crossover(
     parent_a: State,
     parent_b: State,
+    ship: Ship,
     vehicles_by_id: dict[str, Vehicle],
     rng: random.Random,
 ) -> State:
+    # Acak induk mana yang dapet prioritas area
+    if rng.random() < 0.5:
+        parent_a, parent_b = parent_b, parent_a
 
-    children_id = list(vehicles_by_id)
-    n = len(children_id)
-    if n >= 2:
-        c = rng.randint(1, n-1)
+    axis = rng.choice(["x", "y"])
+    extent = ship.w if axis == "x" else ship.l
+    cut = rng.randint(1, extent - 1) if extent > 1 else extent
+    ids = list(vehicles_by_id)
+    rng.shuffle(ids)
 
-        placements = {}
-        for i, vehicle_id in enumerate(children_id):
-            if i < c:
-                parent = parent_a
-            else:
-                parent = parent_b
-            placements[vehicle_id] = parent.placements[vehicle_id]
+    # Ambil vehicle A yang keseluruhannya di kiri/atas garis potong
+    candidates = []
+    for vehicle_id in ids:
+        p = parent_a.placements[vehicle_id]
+        if not p.is_inside():
+            continue
+        vw, vl = vehicles_by_id[vehicle_id].size_taken(p.orientation)
+        edge = p.x + vw if axis == "x" else p.y + vl
+        if edge <= cut:
+            candidates.append(p)
 
-        return State(placements)
-    else:
-        return State(dict(parent_a.placements))
+    # then try B, terus sisanya A yang masih bisa masuk
+    for parent in (parent_b, parent_a):
+        for vehicle_id in ids:
+            candidates.append(parent.placements[vehicle_id])
+
+    placements = {}
+    for vehicle_id in vehicles_by_id:
+        p = parent_a.placements[vehicle_id]
+        placements[vehicle_id] = dataclasses.replace(p, x=None, y=None)
+
+    occupied = set()
+    total_weight = 0
+    for p in candidates:
+        if not p.is_inside() or placements[p.vehicle_id].is_inside():
+            continue
+        vehicle = vehicles_by_id[p.vehicle_id]
+        vw, vl = vehicle.size_taken(p.orientation)
+        if not ship.in_boundary(p.x, p.y, vw, vl):
+            continue
+        if not ship.within_capacity(total_weight + vehicle.weight):
+            continue
+        cells = p.grids(vehicle)
+        if any(cell in occupied for cell in cells):
+            continue
+
+        placements[p.vehicle_id] = p
+        occupied.update(cells)
+        total_weight += vehicle.weight
+
+    return State(placements)
 
 
 def mutate(
@@ -180,7 +215,7 @@ def search(
         while len(new_population) < population_size:
             a = select_parent(population, fitness, rng)
             b = select_parent(population, fitness, rng)
-            child = crossover(a, b, vehicles_by_id, rng)
+            child = crossover(a, b, ship, vehicles_by_id, rng)
             if rng.random() < MUTATION_PROBABILITY:
                 child = mutate(child, ship, vehicles_by_id, rng)
             new_population.append(child)
