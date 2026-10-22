@@ -1,6 +1,5 @@
 # run: python -m src.main
 
-import copy
 import random
 
 from src.algo import genetic_algorithm as ga
@@ -16,18 +15,14 @@ from src.objective import is_feasible, objective
 DATA_PATH = "src/data/sample.json"
 DEFAULT_SEED = 42
 
-def run_ga(start, ship, vehicles, rng, show):
-    return ga.search(start, ship, vehicles, rng, on_iteration=show)
+def run_ga(start, ship, vehicles, rng, show, **params):
+    return ga.search(start, ship, vehicles, rng, on_iteration=show, **params)
 
 
-def run_sa(start, ship, vehicles, rng, show):
-    summaries = []
-    for max_iter in [5000, 10000, 20000]:
-        # copy.copy(rng): tiap run mulai dari keacakan yang sama, jadi yang beda hanya max_iter
-        result = sa.search(start, ship, vehicles, copy.copy(rng), on_iteration=show, max_iter=max_iter)
-        summaries.append(f"max_iter {max_iter} -> value akhir {result.final_value}, iterasi {result.iterations}, stuck {result.stuck_count} kali")
-    # dicetak setelah semua run selesai supaya tidak tertimbun output per iterasi
-    print("\n".join(summaries))
+def run_sa(start, ship, vehicles, rng, show, **params):
+    result = sa.search(start, ship, vehicles, rng, on_iteration=show, **params)
+    print(f"Stuck       : {result.stuck_count} kali")
+    print(f"Stuck = jumlah blok {result.params['stuck_k']} iterasi tanpa peningkatan nilai objective terbaik.")
     return result
 
 
@@ -35,12 +30,12 @@ def run_hc_steepest(start, ship, vehicles, rng, show):
     return hc_steepest.search(start, ship, vehicles, vehicles, on_iteration=show)
 
 
-def run_hc_random_restart(start, ship, vehicles, rng, show):
-    return hc_random_restart.search(start, ship, vehicles, rng, on_iteration=show)
+def run_hc_random_restart(start, ship, vehicles, rng, show, **params):
+    return hc_random_restart.search(start, ship, vehicles, rng, on_iteration=show, **params)
 
 
-def run_hc_sideways(start, ship, vehicles, rng, show):
-    return hc_sideways.search(start, ship, vehicles, on_iteration=show)
+def run_hc_sideways(start, ship, vehicles, rng, show, **params):
+    return hc_sideways.search(start, ship, vehicles, on_iteration=show, **params)
 
 
 def run_hc_stochastic(start, ship, vehicles, rng, show):
@@ -57,6 +52,41 @@ ALGORITHMS = {
 }
 
 
+def prompt_number(label, default, valid):
+    while True:
+        text = input(f"{label} [{default}]: ").strip()
+        try:
+            value = int(text) if text else default
+            if valid(value):
+                return value
+        except ValueError:
+            pass
+        print("Nilai tidak valid. Ikuti batas pada prompt.")
+
+
+def prompt_parameters(algorithm):
+    print("Tekan Enter untuk nilai default.")
+    if algorithm is run_ga:
+        return {
+            "max_iter": prompt_number("max_iter (>= 0)", 300, lambda n: n >= 0),
+            "population_size": prompt_number("population_size (>= 1)", 50, lambda n: n >= 1),
+        }
+    if algorithm is run_sa:
+        max_iter = prompt_number("max_iter (>= 0)", 20000, lambda n: n >= 0)
+        print("SA dapat berhenti sebelum max_iter jika temperatur mencapai t_min.")
+        return {"max_iter": max_iter}
+    if algorithm is run_hc_random_restart:
+        return {
+            "max_restart": prompt_number("max_restart (>= 1, termasuk run awal)", 10, lambda n: n >= 1),
+        }
+    if algorithm is run_hc_sideways:
+        return {
+            "max_sideways_moves": prompt_number("max_sideways_moves (>= 0)", 10, lambda n: n >= 0),
+        }
+    print("Tidak ada parameter tambahan untuk varian ini.")
+    return {}
+
+
 # display per iterasi: n, current value, feasibility, kendaraan inside.
 def show_iteration(ship, vehicles):
     def show(iteration, state, value):
@@ -66,13 +96,15 @@ def show_iteration(ship, vehicles):
     return show
 
 
-def run(name, algorithm, ship, vehicles, seed):
+def run(name, algorithm, ship, vehicles, seed, **params):
     print(f"\n--- {name} ---")
+    if params:
+        print(f"Parameter   : {params}")
     rng = random.Random(seed)
     start = random_initial_state(ship, vehicles, rng)
-    result = algorithm(start, ship, vehicles, rng, show_iteration(ship, vehicles))
+    result = algorithm(start, ship, vehicles, rng, show_iteration(ship, vehicles), **params)
 
-    print(f"Value awal  : {objective(start, ship, vehicles)}")
+    print(f"Value awal  : {objective(result.initial_state, ship, vehicles)}")
     print(f"Value akhir : {result.final_value}")
     print(f"Feasible    : {is_feasible(result.final_state, ship, vehicles)}")
     print(f"Iterasi     : {result.iterations}")
@@ -94,12 +126,13 @@ def main():
         if choice != "1" and choice not in ALGORITHMS:
             print("Pilihan tidak valid.")
             continue
-        seed_text = input(f"Seed [{DEFAULT_SEED}]: ").strip()
-        seed = int(seed_text) if seed_text else DEFAULT_SEED
+        seed = prompt_number("Seed (integer)", DEFAULT_SEED, lambda n: True)
 
         selected = ALGORITHMS.values() if choice == "1" else [ALGORITHMS[choice]]
         for name, algorithm in selected:
-            run(name, algorithm, ship, vehicles, seed)
+            print(f"\nParameter {name}")
+            params = prompt_parameters(algorithm)
+            run(name, algorithm, ship, vehicles, seed, **params)
 
 
 if __name__ == "__main__":
