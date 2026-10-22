@@ -21,16 +21,19 @@ class SearchResult:
 def search(
     initial_state: State,
     ship: Ship,
-    vehicles: list[Vehicle],
+    vehicles: dict[str, Vehicle],
     rng: random.Random,
     max_restart: int = 10,
+    *,
+    on_iteration=None,
 ) -> SearchResult:
+    """Callback memakai jumlah move kumulatif, termasuk state awal tiap restart."""
 
     if max_restart < 1:
         raise ValueError("max_restart minimal harus 1 yak")
 
     start_time = perf_counter()
-    vehicles_by_id = {vehicle.id: vehicle for vehicle in vehicles}
+    vehicles_by_id = vehicles
     best_state: State | None = None
     best_value: float | None = None
     history: list[float] = []
@@ -39,6 +42,10 @@ def search(
     restart_final_values: list[float | None] = []  # value akhir tiap restart
     total_iterations = 0
 
+    def report_iteration(iteration, state, value):
+        if on_iteration is not None:
+            on_iteration(total_iterations + iteration, state, value)
+
     for restart in range(max_restart):
         start = (
             initial_state
@@ -46,7 +53,10 @@ def search(
             else random_initial_state(ship, vehicles, rng)
         )
 
-        run = steepest_ascent(start, ship, vehicles, vehicles_by_id)
+        run = steepest_ascent(
+            start, ship, vehicles, vehicles_by_id,
+            on_iteration=report_iteration if on_iteration is not None else None,
+        )
 
         # mencatat seluruh history dari setiap restart
         restart_starts.append(len(history)) # mencatat panjang history sebelum restart baru dimulai

@@ -22,6 +22,8 @@ def search(
     ship: Ship,
     vehicles_by_id: dict[str, Vehicle],
     rng: random.Random, #dipakai untuk memilih 1 tetangga uphill
+    *,
+    on_iteration=None,
 ) -> SearchResult:
     t = time.perf_counter() #untuk mengukur selang waktu >> dipake hitung durasi
     current = initial_state
@@ -35,6 +37,8 @@ def search(
 
     history = [current_value]
     iterations = 0
+    if on_iteration is not None:
+        on_iteration(0, current, current_value)
     while True:
         uphill = []
         for n in all_neighbors(current, ship, vehicles_by_id):
@@ -54,6 +58,8 @@ def search(
         current, current_value = rng.choice(uphill)
         iterations += 1
         history.append(current_value)
+        if on_iteration is not None:
+            on_iteration(iterations, current, current_value)
 
 
     return SearchResult(

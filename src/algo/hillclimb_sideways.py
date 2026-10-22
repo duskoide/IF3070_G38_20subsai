@@ -20,6 +20,8 @@ def search(
     ship: Ship,
     vehicles_by_id: dict[str, Vehicle],
     max_sideways_moves: int = 10,
+    *,
+    on_iteration=None,
 ) -> SearchResult:
     """Batas sideways dihitung berturut-turut dan direset setelah uphill."""
     if max_sideways_moves < 0:
@@ -36,6 +38,8 @@ def search(
     best_value: float | None = None
     if is_feasible(current, ship, vehicles_by_id):
         best_state, best_value = current, current_value
+    if on_iteration is not None:
+        on_iteration(0, current, current_value)
 
     while True:
         best_neighbor = None
@@ -71,6 +75,8 @@ def search(
         current, current_value = best_neighbor, best_neighbor_value
         iterations += 1
         history.append(current_value)
+        if on_iteration is not None:
+            on_iteration(iterations, current, current_value)
 
         if sideways_moves > 0 and sideways_moves >= max_sideways_moves:
             stop_reason = "max_sideways_moves"
