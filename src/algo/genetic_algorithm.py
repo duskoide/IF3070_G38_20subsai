@@ -7,14 +7,12 @@ from src.initial import random_initial_state
 from src.neighbors import random_neighbor
 from src.objective import is_feasible, objective
 
-
-# Nilai awal rekomendasi
 MUTATION_PROBABILITY = 0.1
 
-MOVE_WEIGHTS = {"swap": 1, "move": 1, "move_out": 0.15, "rotate": 1}
+MOVE_WEIGHTS = {"swap": 1, "move": 0.2, "move_out": 0.4, "rotate": 0.2}
 
 # k numbers of contestants in select_parent()
-TOURNAMENT_SIZE = 2
+TOURNAMENT_SIZE = 3
 
 # Elitism (preserve child superior)
 ELITE_COUNT = 2
@@ -76,7 +74,7 @@ def select_parent(
     # population & fitness paralel, ambil index fitness. repeating index allowed
     for _ in range (k):
         tourney_idx.append(rng.randrange(n))
-    parent_idx = max(fitness[i] for i in tourney_idx)
+    parent_idx: int = max(tourney_idx, key = lambda i: fitness[i]) # index max dari fitness
 
     return population[parent_idx]
 
@@ -216,6 +214,7 @@ def search(
             "mutation_probability": MUTATION_PROBABILITY,
             "tournament_size": TOURNAMENT_SIZE,
             "elite_count": ELITE_COUNT,
+            "move_weights": MOVE_WEIGHTS,
             "seed": seed,
             "initial_value": initial_value
         },
