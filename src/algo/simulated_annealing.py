@@ -21,6 +21,7 @@ class SearchResult:
     stuck_count: int
     duration_s: float
     params: dict
+    extra: dict
 
 def empty_state(vehicles_by_id: dict[str, Vehicle]) -> State:
     placements = {}
@@ -125,6 +126,24 @@ def search(
 
     duration = time.perf_counter() - start_time
 
+    if temperature <= t_min:
+        stop_reason = "t_min"
+    elif iteration >= max_iter:
+        stop_reason = "max_iter"
+    else:
+        stop_reason = "no_neighbor"
+
+    # ringkasan untuk visualize.py, bentuknya sama dengan extra di HC/GA
+    extra = {
+        "stop_reason": stop_reason,
+        "stuck_count": stuck_count,
+        "stuck_k": stuck_k,
+        "t0": t0,
+        "alpha": alpha,
+        "t_min": t_min,
+        "max_iter": max_iter,
+    }
+
     params = {
         "t0": t0,
         "alpha": alpha,
@@ -147,5 +166,6 @@ def search(
         stuck_count=stuck_count,
         duration_s=duration,
         params=params,
+        extra=extra,
     )
     return result
